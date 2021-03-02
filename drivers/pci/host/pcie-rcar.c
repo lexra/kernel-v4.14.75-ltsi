@@ -17,6 +17,7 @@
 #include <linux/bitops.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
+#include <linux/regulator/consumer.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/irqdomain.h>
@@ -158,6 +159,8 @@ struct rcar_pcie {
 	struct list_head	resources;
 	int			root_bus_nr;
 	struct clk		*bus_clk;
+	struct regulator	*pcie3v3; /* 3.3V power supply */
+	struct regulator	*pcie1v8; /* 1.8V power supply */
 	struct			rcar_msi msi;
 };
 
@@ -1199,6 +1202,36 @@ static const struct of_device_id rcar_pcie_of_match[] = {
 	{},
 };
 
+static int rcar_pcie_set_vpcie(struct rcar_pcie *pcie)
+{
+	struct device *dev = pcie->dev;
+	int err;
+
+	if (!IS_ERR(pcie->pcie3v3)) {
+		err = regulator_enable(pcie->pcie3v3);
+		if (err) {
+			dev_err(dev, "fail to enable vpcie3v3 regulator\n");
+			goto err_out;
+		}
+	}
+
+	if (!IS_ERR(pcie->pcie1v8)) {
+		err = regulator_enable(pcie->pcie1v8);
+		if (err) {
+			dev_err(dev, "fail to enable vpcie1v8 regulator\n");
+			goto err_disable_3v3;
+		}
+	}
+
+	return 0;
+
+err_disable_3v3:
+	if (!IS_ERR(pcie->pcie3v3))
+		regulator_disable(pcie->pcie3v3);
+err_out:
+	return err;
+}
+
 static int rcar_pcie_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -1216,6 +1249,26 @@ static int rcar_pcie_probe(struct platform_device *pdev)
 
 	pcie->dev = dev;
 	platform_set_drvdata(pdev, pcie);
+
+	pcie->pcie3v3 = devm_regulator_get_optional(dev, "pcie3v3");
+	if (IS_ERR(pcie->pcie3v3)) {
+		if (PTR_ERR(pcie->pcie3v3) == -EPROBE_DEFER)
+			return -EPROBE_DEFER;
+		dev_info(dev, "no pcie3v3 regulator found\n");
+	}
+
+	pcie->pcie1v8 = devm_regulator_get_optional(dev, "pcie1v8");
+	if (IS_ERR(pcie->pcie1v8)) {
+		if (PTR_ERR(pcie->pcie1v8) == -EPROBE_DEFER)
+			return -EPROBE_DEFER;
+		dev_info(dev, "no pcie1v8 regulator found\n");
+	}
+
+	err = rcar_pcie_set_vpcie(pcie);
+	if (err) {
+		dev_err(dev, "failed to set pcie regulators\n");
+		return err;
+	}
 
 	err = pci_parse_request_of_pci_ranges(dev, &pcie->resources, NULL);
 	if (err)
@@ -1377,31 +1430,3 @@ static struct platform_driver rcar_pcie_driver = {
 	.probe = rcar_pcie_probe,
 };
 builtin_platform_driver(rcar_pcie_driver);
-
-static int rcar_pcie_pci_notifier(struct notifier_block *nb,
-				  unsigned long action, void *data)
-{
-	struct device *dev = data;
-
-	switch (action) {
-	case BUS_NOTIFY_BOUND_DRIVER:
-		/* Force the DMA mask to lower 32-bits */
-		dma_set_mask_and_coherent(dev, DMA_BIT_MASK(32));
-		break;
-	default:
-		return NOTIFY_DONE;
-	}
-
-	return NOTIFY_OK;
-}
-
-static struct notifier_block device_nb = {
-	.notifier_call = rcar_pcie_pci_notifier,
-};
-
-static int __init register_rcar_pcie_pci_notifier(void)
-{
-	return bus_register_notifier(&pci_bus_type, &device_nb);
-}
-
-arch_initcall(register_rcar_pcie_pci_notifier);

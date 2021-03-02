@@ -1,0 +1,46 @@
+/*
+ * Device Tree Source for the V3HSK VideoBox 4-channel board on r8a7798 with dummy LVDS input
+ *
+ * Copyright (C) 2018 Cogent Embedded, Inc.
+ *
+ * This file is licensed under the terms of the GNU General Public License
+ * version 2.  This program is licensed "as is" without any warranty of any
+ * kind, whether express or implied.
+ */
+
+#include "r8a77980-v3hsk-vb-4ch.dts"
+
+&i2cswitch1 {
+	i2c@2 {
+		/delete-node/ ov106xx@0;
+
+		dummy-camera@0 {
+			compatible = "dummy-camera";
+			reg = <0x60>;
+
+			dummy,width = <1920>;
+			dummy,height = <1080>;
+
+			port@0 {
+				dummy_camera_in0: endpoint {
+					clock-lanes = <0>;
+					data-lanes = <1 2 3 4>;
+					remote-endpoint = <&vin0ep0>;
+				};
+			};
+			port@1 {
+				dummy_camera_ti9x4_des0ep0: endpoint@1 {
+					remote-endpoint = <&ti9x4_des0ep0>;
+				};
+			};
+		};
+	};
+};
+
+&ti9x4_des0ep0 {
+	remote-endpoint = <&dummy_camera_in0>;
+};
+
+&vin0ep0 {
+	remote-endpoint = <&dummy_camera_in0>;
+};

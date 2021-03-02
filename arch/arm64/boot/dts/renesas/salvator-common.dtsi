@@ -325,37 +325,6 @@
 	};
 };
 
-&csi20 {
-	status = "okay";
-
-	ports {
-		port@0 {
-			reg = <0>;
-			csi20_in: endpoint {
-				clock-lanes = <0>;
-				data-lanes = <1>;
-				remote-endpoint = <&adv7482_txb>;
-			};
-		};
-	};
-};
-
-&csi40 {
-	status = "okay";
-
-	ports {
-		port@0 {
-			reg = <0>;
-
-			csi40_in: endpoint {
-				clock-lanes = <0>;
-				data-lanes = <1 2 3 4>;
-				remote-endpoint = <&adv7482_txa>;
-			};
-		};
-	};
-};
-
 &du {
 	pinctrl-0 = <&du_pins>;
 	pinctrl-names = "default";
@@ -496,7 +465,6 @@
 			adv7482_txa: endpoint {
 				clock-lanes = <0>;
 				data-lanes = <1 2 3 4>;
-				remote-endpoint = <&csi40_in>;
 			};
 		};
 
@@ -506,7 +474,6 @@
 			adv7482_txb: endpoint {
 				clock-lanes = <0>;
 				data-lanes = <1>;
-				remote-endpoint = <&csi20_in>;
 			};
 		};
 	};
@@ -777,6 +744,59 @@
 
 				playback = <&ssi0 &src0 &dvc0>;
 				capture  = <&ssi1 &src1 &dvc1>;
+			};
+		};
+	};
+};
+
+&rpc0 {
+	status = "okay";
+
+	flash@0 {
+		compatible = "cfi-flash";
+		reg = <0>;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			bootparam@0 {
+				reg = <0x00000000 0x040000>;
+				read-only;
+			};
+			bl2@00040000 {
+				reg = <0x00040000 0x140000>;
+				read-only;
+			};
+			cert_header_sa6@00180000 {
+				reg = <0x00180000 0x040000>;
+				read-only;
+			};
+			bl31@001C0000 {
+				reg = <0x001C0000 0x040000>;
+				read-only;
+			};
+			tee@00200000 {
+				reg = <0x00200000 0x440000>;
+				read-only;
+			};
+			uboot@00640000 {
+				reg = <0x00640000 0x100000>;
+				read-only;
+			};
+			uboot-env@00740000 {
+				reg = <0x00740000 0x040000>;
+				read-only;
+			};
+			dtb@00780000 {
+				reg = <0x00780000 0x080000>;
+			};
+			kernel@00800000 {
+				reg = <0x00800000 0x1400000>;
+			};
+			user@01C00000 {
+				reg = <0x01C00000 0x2400000>;
 			};
 		};
 	};

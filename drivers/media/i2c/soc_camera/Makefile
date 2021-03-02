@@ -5,8 +5,17 @@ obj-$(CONFIG_SOC_CAMERA_MT9T031)	+= mt9t031.o
 obj-$(CONFIG_SOC_CAMERA_MT9T112)	+= mt9t112.o
 obj-$(CONFIG_SOC_CAMERA_MT9V022)	+= mt9v022.o
 obj-$(CONFIG_SOC_CAMERA_OV5642)		+= ov5642.o
+obj-$(CONFIG_SOC_CAMERA_OV5647)		+= ov5647.o
 obj-$(CONFIG_SOC_CAMERA_OV772X)		+= ov772x.o
 obj-$(CONFIG_SOC_CAMERA_OV9640)		+= ov9640.o
 obj-$(CONFIG_SOC_CAMERA_OV9740)		+= ov9740.o
 obj-$(CONFIG_SOC_CAMERA_RJ54N1)		+= rj54n1cb0c.o
 obj-$(CONFIG_SOC_CAMERA_TW9910)		+= tw9910.o
+obj-$(CONFIG_SOC_CAMERA_IMX219)		+= imx219.o
+
+obj-$(CONFIG_SOC_CAMERA_AR0147)		+= ar0147.o
+obj-y += imagers/
+obj-y += gmsl/
+obj-y += fpdlink/
+
+obj-$(CONFIG_SOC_CAMERA_OV106XX)	+= ov106xx.o

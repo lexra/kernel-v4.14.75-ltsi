@@ -1,0 +1,30 @@
+/*
+ * Device Tree Source for the LVDS cameras
+ *
+ * Copyright (C) 2020 Cogent Embedded, Inc.
+ *
+ * This file is licensed under the terms of the GNU General Public License
+ * version 2.  This program is licensed "as is" without any warranty of any
+ * kind, whether express or implied.
+ */
+
+#define COMPATIBLE_CAMERAS	\
+	"onnn,ar0140",		\
+	"onnn,ar0143",		\
+	"onnn,ar0147",		\
+	"onnn,ar0231",		\
+	"onnn,ar0233",		\
+	"onnn,ap0101",		\
+	"onnn,ap0201",		\
+	"ovti,ov10635",		\
+	"ovti,ov10640",		\
+	"ovti,ov2311",		\
+	"ovti,ov2775",		\
+	"ovti,ov490",		\
+	"ovti,ov495",		\
+	"ovti,ox01d10",		\
+	"ovti,ox03a",		\
+	"sony,imx390",		\
+	"sony,isx016",		\
+	"sony,isx019",		\
+	"dummy,camera"

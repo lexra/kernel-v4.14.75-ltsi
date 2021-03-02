@@ -1,0 +1,25 @@
+config SOC_CAMERA_MAX9286
+	tristate "max9286 GMSL support"
+	depends on I2C
+	help
+	  This is a MAXIM max9286 GMSL driver
+
+config SOC_CAMERA_MAX9288
+	tristate "max9288 GMSL support"
+	depends on I2C
+	help
+	  This is a MAXIM max9288 GMSL driver
+
+config SOC_CAMERA_MAX9296
+	tristate "max9296 GMSL2 support"
+	depends on I2C
+	select REGMAP_I2C
+	help
+	  This is a MAXIM max9296 GMSL2 driver
+
+config SOC_CAMERA_MAX96712
+	tristate "max96712 GMSL2 support"
+	depends on I2C
+	select REGMAP_I2C
+	help
+	  This is a MAXIM max96712 GMSL2 driver

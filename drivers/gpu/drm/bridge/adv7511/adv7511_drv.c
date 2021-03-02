@@ -27,7 +27,7 @@ static const struct reg_sequence adv7511_fixed_registers[] = {
 	{ 0x98, 0x03 },
 	{ 0x9a, 0xe0 },
 	{ 0x9c, 0x30 },
-	{ 0x9d, 0x61 },
+	{ 0x9d, 0x01 },
 	{ 0xa2, 0xa4 },
 	{ 0xa3, 0xa4 },
 	{ 0xe0, 0xd0 },
@@ -323,6 +323,8 @@ static void adv7511_set_link_config(struct adv7511 *adv7511,
 	adv7511->hsync_polarity = config->hsync_polarity;
 	adv7511->vsync_polarity = config->vsync_polarity;
 	adv7511->rgb = config->input_colorspace == HDMI_COLORSPACE_RGB;
+	adv7511->limit_vref = config->limit_freq_option;
+	adv7511->limit_freq = config->limit_vrefresh_option;
 }
 
 static void __adv7511_power_on(struct adv7511 *adv7511)
@@ -551,18 +553,19 @@ static int adv7511_get_edid_block(void *data, u8 *buf, unsigned int block,
 		 * support 64 byte transfers than 256 byte transfers
 		 */
 
+#define CHUNK_SIZE	1
 		xfer[0].addr = adv7511->i2c_edid->addr;
 		xfer[0].flags = 0;
 		xfer[0].len = 1;
 		xfer[0].buf = &offset;
 		xfer[1].addr = adv7511->i2c_edid->addr;
 		xfer[1].flags = I2C_M_RD;
-		xfer[1].len = 64;
+		xfer[1].len = CHUNK_SIZE;
 		xfer[1].buf = adv7511->edid_buf;
 
 		offset = 0;
 
-		for (i = 0; i < 4; ++i) {
+		for (i = 0; i < 256/CHUNK_SIZE; ++i) {
 			ret = i2c_transfer(adv7511->i2c_edid->adapter, xfer,
 					   ARRAY_SIZE(xfer));
 			if (ret < 0)
@@ -570,8 +573,8 @@ static int adv7511_get_edid_block(void *data, u8 *buf, unsigned int block,
 			else if (ret != 2)
 				return -EIO;
 
-			xfer[1].buf += 64;
-			offset += 64;
+			xfer[1].buf += CHUNK_SIZE;
+			offset += CHUNK_SIZE;
 		}
 
 		adv7511->current_edid_segment = block / 2;
@@ -671,6 +674,16 @@ static enum drm_mode_status adv7511_mode_valid(struct adv7511 *adv7511,
 {
 	if (mode->clock > 165000)
 		return MODE_CLOCK_HIGH;
+
+	if (adv7511->limit_freq) {
+		if (mode->clock > (adv7511->limit_freq / 1000))
+			return MODE_CLOCK_HIGH;
+	}
+
+	if (adv7511->limit_vref) {
+		if (drm_mode_vrefresh(mode) < adv7511->limit_vref)
+			return MODE_BAD;
+	}
 
 	return MODE_OK;
 }
@@ -862,6 +875,9 @@ static int adv7511_bridge_attach(struct drm_bridge *bridge)
 	else
 		adv->connector.polled = DRM_CONNECTOR_POLL_CONNECT |
 				DRM_CONNECTOR_POLL_DISCONNECT;
+
+	adv->connector.interlace_allowed =
+		of_property_read_bool(bridge->of_node, "interlace-allowed");
 
 	ret = drm_connector_init(bridge->dev, &adv->connector,
 				 &adv7511_connector_funcs,
@@ -1085,6 +1101,16 @@ static int adv7511_parse_dt(struct device_node *np,
 	config->sync_pulse = ADV7511_INPUT_SYNC_PULSE_NONE;
 	config->vsync_polarity = ADV7511_SYNC_POLARITY_PASSTHROUGH;
 	config->hsync_polarity = ADV7511_SYNC_POLARITY_PASSTHROUGH;
+
+	ret = of_property_read_u32(np, "limit-frequency",
+				   &config->limit_vrefresh_option);
+	if (ret < 0)
+		config->limit_vrefresh_option = 0;
+
+	ret = of_property_read_u32(np, "lower-refresh",
+				   &config->limit_freq_option);
+	if (ret < 0)
+		config->limit_freq_option = 0;
 
 	return 0;
 }

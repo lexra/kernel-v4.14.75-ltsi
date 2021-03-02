@@ -244,6 +244,16 @@ static struct ipmmu_whitelist *r8a77965_whitelist[] = {
 	NULL, /* Terminator */
 };
 
+/* R-Car V3M (R8A77970) */
+static struct ipmmu_whitelist *r8a77970_whitelist[] = {
+	NULL, /* Terminator */
+};
+
+/* R-Car V3H (R8A77980) */
+static struct ipmmu_whitelist *r8a77980_whitelist[] = {
+	NULL, /* Terminator */
+};
+
 /* R-Car E3 (R8A77990) */
 static struct ipmmu_whitelist r8a77990_ipmmu_vi0 = {
 	.ipmmu_name	= "febd0000.mmu",
@@ -1126,7 +1136,10 @@ static const struct soc_device_attribute soc_rcar_gen3[] = {
 	{ .soc_id = "r8a7795", },
 	{ .soc_id = "r8a7796", },
 	{ .soc_id = "r8a77965", },
+	{ .soc_id = "r8a77970", },
+	{ .soc_id = "r8a77980", },
 	{ .soc_id = "r8a77990", },
+	{ .soc_id = "r8a77995", },
 	{ /* sentinel */ }
 };
 
@@ -1143,6 +1156,16 @@ static const struct soc_device_attribute r8a7796[]  = {
 
 static const struct soc_device_attribute r8a77965[]  = {
 	{ .soc_id = "r8a77965" },
+	{ /* sentinel */ }
+};
+
+static const struct soc_device_attribute r8a77970[]  = {
+	{ .soc_id = "r8a77970" },
+	{ /* sentinel */ }
+};
+
+static const struct soc_device_attribute r8a77980[]  = {
+	{ .soc_id = "r8a77980" },
 	{ /* sentinel */ }
 };
 
@@ -1427,7 +1450,16 @@ static const struct of_device_id ipmmu_of_ids[] = {
 		.compatible = "renesas,ipmmu-r8a77965",
 		.data = &ipmmu_features_rcar_gen3,
 	}, {
+		.compatible = "renesas,ipmmu-r8a77970",
+		.data = &ipmmu_features_rcar_gen3,
+	}, {
+		.compatible = "renesas,ipmmu-r8a77980",
+		.data = &ipmmu_features_rcar_gen3,
+	}, {
 		.compatible = "renesas,ipmmu-r8a77990",
+		.data = &ipmmu_features_rcar_gen3,
+	}, {
+		.compatible = "renesas,ipmmu-r8a77995",
 		.data = &ipmmu_features_rcar_gen3,
 	}, {
 		/* Terminator */
@@ -1476,10 +1508,14 @@ static int ipmmu_whitelist_init(struct ipmmu_vmsa_device *mmu)
 		mmu->whitelist = r8a77965_whitelist;
 	else if (soc_device_match(r8a77990))
 		mmu->whitelist = r8a77990_whitelist;
+	else if (soc_device_match(r8a77970))
+		mmu->whitelist = r8a77970_whitelist;
+	else if (soc_device_match(r8a77980))
+		mmu->whitelist = r8a77980_whitelist;
 	else
 		mmu->whitelist = NULL;
 
-	if (!mmu->whitelist[0])
+	if (!mmu->whitelist)
 		return -1;
 
 	return ipmmu_bm_init(mmu);
@@ -1859,11 +1895,14 @@ static void __exit ipmmu_exit(void)
 subsys_initcall(ipmmu_init);
 module_exit(ipmmu_exit);
 
-IOMMU_OF_DECLARE(ipmmu_vmsa_iommu_of, "renesas,ipmmu-vmsa", NULL);
-IOMMU_OF_DECLARE(ipmmu_r8a7795_iommu_of, "renesas,ipmmu-r8a7795", NULL);
-IOMMU_OF_DECLARE(ipmmu_r8a7796_iommu_of, "renesas,ipmmu-r8a7796", NULL);
-IOMMU_OF_DECLARE(ipmmu_r8a77965_iommu_of, "renesas,ipmmu-r8a77965", NULL);
-IOMMU_OF_DECLARE(ipmmu_r8a77990_iommu_of, "renesas,ipmmu-r8a77990", NULL);
+IOMMU_OF_DECLARE(ipmmu_vmsa_iommu_of, "renesas,ipmmu-vmsa");
+IOMMU_OF_DECLARE(ipmmu_r8a7795_iommu_of, "renesas,ipmmu-r8a7795");
+IOMMU_OF_DECLARE(ipmmu_r8a7796_iommu_of, "renesas,ipmmu-r8a7796");
+IOMMU_OF_DECLARE(ipmmu_r8a77965_iommu_of, "renesas,ipmmu-r8a77965");
+IOMMU_OF_DECLARE(ipmmu_r8a77970_iommu_of, "renesas,ipmmu-r8a77970");
+IOMMU_OF_DECLARE(ipmmu_r8a77980_iommu_of, "renesas,ipmmu-r8a77980");
+IOMMU_OF_DECLARE(ipmmu_r8a77990_iommu_of, "renesas,ipmmu-r8a77990");
+IOMMU_OF_DECLARE(ipmmu_r8a77995_iommu_of, "renesas,ipmmu-r8a77995");
 
 MODULE_DESCRIPTION("IOMMU API for Renesas VMSA-compatible IPMMU");
 MODULE_AUTHOR("Laurent Pinchart <laurent.pinchart@ideasonboard.com>");

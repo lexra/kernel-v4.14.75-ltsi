@@ -795,7 +795,8 @@ static int rcar_i2c_master_xfer(struct i2c_adapter *adap,
 	if (priv->suspended)
 		return -EBUSY;
 
-	pm_runtime_get_sync(dev);
+	if (!(priv->flags & ID_P_PM_BLOCKED))
+		pm_runtime_get_sync(dev);
 
 	/* Check bus state before init otherwise bus busy info will be lost */
 	ret = rcar_i2c_bus_barrier(priv);
@@ -847,7 +848,8 @@ static int rcar_i2c_master_xfer(struct i2c_adapter *adap,
 		ret = num - priv->msgs_left; /* The number of transfer */
 	}
 out:
-	pm_runtime_put(dev);
+	if (!(priv->flags & ID_P_PM_BLOCKED))
+		pm_runtime_put(dev);
 
 	if (ret < 0 && ret != -ENXIO)
 		dev_err(dev, "error %d : %x\n", ret, priv->flags);
@@ -866,7 +868,8 @@ static int rcar_reg_slave(struct i2c_client *slave)
 		return -EAFNOSUPPORT;
 
 	/* Keep device active for slave address detection logic */
-	pm_runtime_get_sync(rcar_i2c_priv_to_dev(priv));
+	if (!(priv->flags & ID_P_PM_BLOCKED))
+		pm_runtime_get_sync(rcar_i2c_priv_to_dev(priv));
 
 	priv->slave = slave;
 	rcar_i2c_write(priv, ICSAR, slave->addr);
@@ -888,7 +891,8 @@ static int rcar_unreg_slave(struct i2c_client *slave)
 
 	priv->slave = NULL;
 
-	pm_runtime_put(rcar_i2c_priv_to_dev(priv));
+	if (!(priv->flags & ID_P_PM_BLOCKED))
+		pm_runtime_put(rcar_i2c_priv_to_dev(priv));
 
 	return 0;
 }
@@ -1042,6 +1046,8 @@ static int rcar_i2c_suspend(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct rcar_i2c_priv *priv = platform_get_drvdata(pdev);
 
+	if (priv->flags & ID_P_PM_BLOCKED)
+		pm_runtime_put(dev);
 	priv->suspended = 1;
 
 	return 0;
@@ -1061,7 +1067,8 @@ static int rcar_i2c_resume(struct device *dev)
 		dev_err(dev, "Could not calculate clock\n");
 
 	rcar_i2c_init(priv);
-	pm_runtime_put(dev);
+	if (!(priv->flags & ID_P_PM_BLOCKED))
+		pm_runtime_put(dev);
 
 	priv->suspended = 0;
 

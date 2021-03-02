@@ -8,6 +8,7 @@
 
 /dts-v1/;
 #include "r8a77980.dtsi"
+#include <dt-bindings/gpio/gpio.h>
 
 / {
 	model = "Renesas Condor board based on r8a77980";
@@ -15,7 +16,8 @@
 
 	aliases {
 		serial0 = &scif0;
-		ethernet0 = &avb;
+		ethernet0 = &gether;
+		ethernet1 = &avb;
 	};
 
 	chosen {
@@ -26,6 +28,38 @@
 		device_type = "memory";
 		/* first 128MB is reserved for secure area. */
 		reg = <0 0x48000000 0 0x78000000>;
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/* device specific region for Lossy Decompression */
+		lossy_decompress: linux,lossy_decompress {
+			no-map;
+			reg = <0x00000000 0x7c000000 0x0 0x03000000>;
+		};
+
+		/* device specific region for contiguous allocations */
+		mmp_reserved: linux,multimedia {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x7f000000 0x0 0x01000000>;
+		};
+	};
+
+	mmngr {
+		compatible = "renesas,mmngr";
+		memory-region = <&mmp_reserved>, <&lossy_decompress>;
+	};
+
+	mmngrbuf {
+		compatible = "renesas,mmngrbuf";
+	};
+
+	vspm_if {
+		compatible = "renesas,vspm_if";
 	};
 
 	d3_3v: regulator-0 {
@@ -45,6 +79,56 @@
 		regulator-boot-on;
 		regulator-always-on;
 	};
+
+	d1_8v: regulator-2 {
+		compatible = "regulator-fixed";
+		regulator-name = "D1.8V";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	hdmi-out {
+		compatible = "hdmi-connector";
+		type = "a";
+
+		port {
+			hdmi_con: endpoint {
+				remote-endpoint = <&adv7511_out>;
+			};
+		};
+	};
+
+	lvds-decoder {
+		compatible = "thine,thc63lvd1024";
+		vcc-supply = <&d3_3v>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				thc63lvd1024_in: endpoint {
+					remote-endpoint = <&lvds0_out>;
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				thc63lvd1024_out: endpoint {
+					remote-endpoint = <&adv7511_in>;
+				};
+			};
+		};
+	};
+
+	x1_clk: x1-clock {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <148500000>;
+	};
 };
 
 &avb {
@@ -54,11 +138,14 @@
 	phy-mode = "rgmii-id";
 	phy-handle = <&phy0>;
 	renesas,no-ether-link;
-	status = "okay";
+	status = "disabled";
 
 	phy0: ethernet-phy@0 {
 		rxc-skew-ps = <1500>;
 		reg = <0>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <17 IRQ_TYPE_LEVEL_LOW>;
+		reset-gpios = <&gpio4 22 GPIO_ACTIVE_LOW>;
 	};
 };
 
@@ -72,12 +159,411 @@
 	};
 };
 
+&csi40 {
+	status = "okay";
+
+	virtual,channel {
+		csi2_vc0 {
+			data,type = "ycbcr422";
+			receive,vc = <0>;
+		};
+		csi2_vc1 {
+			data,type = "ycbcr422";
+			receive,vc = <1>;
+		};
+		csi2_vc2 {
+			data,type = "ycbcr422";
+			receive,vc = <2>;
+		};
+		csi2_vc3 {
+			data,type = "ycbcr422";
+			receive,vc = <3>;
+		};
+	};
+
+	port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		csi40_ep: endpoint {
+			clock-lanes = <0>;
+			data-lanes = <1 2 3 4>;
+			csi-rate = <300>;
+		};
+	};
+};
+
+&csi41 {
+	status = "okay";
+
+	virtual,channel {
+		csi2_vc0 {
+			data,type = "ycbcr422";
+			receive,vc = <0>;
+		};
+		csi2_vc1 {
+			data,type = "ycbcr422";
+			receive,vc = <1>;
+		};
+		csi2_vc2 {
+			data,type = "ycbcr422";
+			receive,vc = <2>;
+		};
+		csi2_vc3 {
+			data,type = "ycbcr422";
+			receive,vc = <3>;
+		};
+	};
+
+	port {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		csi41_ep: endpoint {
+			clock-lanes = <0>;
+			data-lanes = <1 2 3 4>;
+			csi-rate = <300>;
+		};
+	};
+};
+
+&du {
+	clocks = <&cpg CPG_MOD 724>,
+		 <&x1_clk>;
+	clock-names = "du.0", "dclkin.0";
+	status = "okay";
+};
+
 &extal_clk {
 	clock-frequency = <16666666>;
 };
 
 &extalr_clk {
 	clock-frequency = <32768>;
+};
+
+&gether {
+	pinctrl-0 = <&gether_pins>;
+	pinctrl-names = "default";
+
+	phy-mode = "rgmii-id";
+	phy-handle = <&phy1>;
+	renesas,no-ether-link;
+	status = "okay";
+
+	phy1: ethernet-phy@1 {
+		rxc-skew-ps = <1500>;
+		reg = <0>;
+		interrupt-parent = <&gpio4>;
+		interrupts = <23 IRQ_TYPE_LEVEL_LOW>;
+	};
+};
+
+&i2c0 {
+	pinctrl-0 = <&i2c0_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+	clock-frequency = <400000>;
+
+	io_expander0: gpio@20 {
+		compatible = "onnn,pca9654";
+		reg = <0x20>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
+
+	io_expander1: gpio@21 {
+		compatible = "onnn,pca9654";
+		reg = <0x21>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
+
+	hdmi@39 {
+		compatible = "adi,adv7511w";
+		reg = <0x39>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <20 IRQ_TYPE_LEVEL_LOW>;
+		avdd-supply = <&d1_8v>;
+		dvdd-supply = <&d1_8v>;
+		pvdd-supply = <&d1_8v>;
+		bgvdd-supply = <&d1_8v>;
+		dvdd-3v-supply = <&d3_3v>;
+
+		adi,input-depth = <8>;
+		adi,input-colorspace = "rgb";
+		adi,input-clock = "1x";
+		adi,input-style = <1>;
+		adi,input-justification = "evenly";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				adv7511_in: endpoint {
+					remote-endpoint = <&thc63lvd1024_out>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				adv7511_out: endpoint {
+					remote-endpoint = <&hdmi_con>;
+				};
+			};
+		};
+	};
+};
+
+&i2c1 {
+	pinctrl-0 = <&i2c1_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+	clock-frequency = <400000>;
+
+	ov106xx@0 {
+		compatible = "ovti,ov106xx";
+		reg = <0x60>;
+
+		port@0 {
+			ov106xx_in0: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&vin0ep0>;
+			};
+		};
+		port@1 {
+			ov106xx_max9286_des0ep0: endpoint@0 {
+				remote-endpoint = <&max9286_des0ep0>;
+			};
+		};
+	};
+
+	ov106xx@1 {
+		compatible = "ovti,ov106xx";
+		reg = <0x61>;
+
+		port@0 {
+			ov106xx_in1: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&vin1ep0>;
+			};
+		};
+		port@1 {
+			ov106xx_max9286_des0ep1: endpoint@0 {
+				remote-endpoint = <&max9286_des0ep1>;
+			};
+		};
+	};
+
+	ov106xx@2 {
+		compatible = "ovti,ov106xx";
+		reg = <0x62>;
+
+		port@0 {
+			ov106xx_in2: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&vin2ep0>;
+			};
+		};
+		port@1 {
+			ov106xx_max9286_des0ep2: endpoint@0 {
+				remote-endpoint = <&max9286_des0ep2>;
+			};
+		};
+	};
+
+	ov106xx@3 {
+		compatible = "ovti,ov106xx";
+		reg = <0x63>;
+
+		port@0 {
+			ov106xx_in3: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&vin3ep0>;
+			};
+		};
+		port@1 {
+			ov106xx_des0ep3: endpoint {
+				remote-endpoint = <&max9286_des0ep3>;
+			};
+		};
+	};
+
+	ov106xx@4 {
+		compatible = "ovti,ov106xx";
+		reg = <0x64>;
+
+		port@0 {
+			ov106xx_in4: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&vin4ep0>;
+			};
+		};
+		port@1 {
+			ov106xx_max9286_des1ep0: endpoint@0 {
+				remote-endpoint = <&max9286_des1ep0>;
+			};
+		};
+	};
+
+	ov106xx@5 {
+		compatible = "ovti,ov106xx";
+		reg = <0x65>;
+
+		port@0 {
+			ov106xx_in5: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&vin5ep0>;
+			};
+		};
+		port@1 {
+			ov106xx_max9286_des1ep1: endpoint@0 {
+				remote-endpoint = <&max9286_des1ep1>;
+			};
+		};
+	};
+
+	ov106xx@6 {
+		compatible = "ovti,ov106xx";
+		reg = <0x66>;
+
+		port@0 {
+			ov106xx_in6: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&vin6ep0>;
+			};
+		};
+		port@1 {
+			ov106xx_max9286_des1ep2: endpoint@0 {
+				remote-endpoint = <&max9286_des1ep2>;
+			};
+		};
+	};
+
+	ov106xx@7 {
+		compatible = "ovti,ov106xx";
+		reg = <0x67>;
+
+		port@0 {
+			ov106xx_in7: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&vin7ep0>;
+			};
+		};
+		port@1 {
+			ov106xx_des1ep3: endpoint {
+				remote-endpoint = <&max9286_des1ep3>;
+			};
+		};
+	};
+
+	max9286@0 {
+		compatible = "maxim,max9286";
+		reg = <0x48>;
+		gpios = <&io_expander0 0 GPIO_ACTIVE_LOW>; /* MAX9286 PWDN */
+		maxim,gpio0 = <0>;
+		maxim,sensor_delay = <100>;
+		maxim,links = <4>;
+		maxim,lanes = <4>;
+		maxim,resetb-gpio = <1>;
+		maxim,fsync-mode = "automatic";
+		maxim,timeout = <100>;
+
+		port@0 {
+			max9286_des0ep0: endpoint@0 {
+				max9271-addr = <0x50>;
+				dvp-order = <1>;
+				remote-endpoint = <&ov106xx_in0>;
+			};
+			max9286_des0ep1: endpoint@1 {
+				max9271-addr = <0x51>;
+				dvp-order = <1>;
+				remote-endpoint = <&ov106xx_in1>;
+			};
+			max9286_des0ep2: endpoint@2 {
+				max9271-addr = <0x52>;
+				dvp-order = <1>;
+				remote-endpoint = <&ov106xx_in2>;
+			};
+			max9286_des0ep3: endpoint@3 {
+				max9271-addr = <0x53>;
+				dvp-order = <1>;
+				remote-endpoint = <&ov106xx_in3>;
+			};
+		};
+		port@1 {
+			max9286_csi0ep0: endpoint {
+				csi-rate = <700>;
+				remote-endpoint = <&csi40_ep>;
+			};
+		};
+	};
+
+	max9286@1 {
+		compatible = "maxim,max9286";
+		reg = <0x4a>;
+		gpios = <&io_expander1 0 GPIO_ACTIVE_LOW>; /* MAX9286 PWDN */
+		maxim,gpio0 = <0>;
+		maxim,sensor_delay = <100>;
+		maxim,links = <4>;
+		maxim,lanes = <4>;
+		maxim,resetb-gpio = <1>;
+		maxim,fsync-mode = "automatic";
+		maxim,timeout = <100>;
+
+		port@0 {
+			max9286_des1ep0: endpoint@0 {
+				max9271-addr = <0x54>;
+				dvp-order = <1>;
+				remote-endpoint = <&ov106xx_in4>;
+			};
+			max9286_des1ep1: endpoint@1 {
+				max9271-addr = <0x55>;
+				dvp-order = <1>;
+				remote-endpoint = <&ov106xx_in5>;
+			};
+			max9286_des1ep2: endpoint@2 {
+				max9271-addr = <0x56>;
+				dvp-order = <1>;
+				remote-endpoint = <&ov106xx_in6>;
+			};
+			max9286_des1ep3: endpoint@3 {
+				max9271-addr = <0x57>;
+				dvp-order = <1>;
+				remote-endpoint = <&ov106xx_in7>;
+			};
+		};
+		port@1 {
+			max9286_csi1ep0: endpoint {
+				csi-rate = <700>;
+				remote-endpoint = <&csi41_ep>;
+			};
+		};
+	};
+};
+
+&lvds0 {
+	status = "okay";
+
+	ports {
+		port@1 {
+			lvds0_out: endpoint {
+				remote-endpoint = <&thc63lvd1024_in>;
+			};
+		};
+	};
 };
 
 &mmc0 {
@@ -93,6 +579,18 @@
 	status = "okay";
 };
 
+&pciec {
+	status = "okay";
+};
+
+&pcie_bus_clk {
+	clock-frequency = <100000000>;
+};
+
+&pcie_phy {
+	status = "okay";
+};
+
 &pfc {
 	avb_pins: avb {
 		groups = "avb_mdio", "avb_rgmii";
@@ -102,6 +600,22 @@
 	canfd0_pins: canfd0 {
 		groups = "canfd0_data_a";
 		function = "canfd0";
+	};
+
+	gether_pins: gether {
+		groups = "gether_mdio_a", "gether_rgmii",
+			 "gether_txcrefclk", "gether_txcrefclk_mega";
+		function = "gether";
+	};
+
+	i2c0_pins: i2c0 {
+		groups = "i2c0";
+		function = "i2c0";
+	};
+
+	i2c1_pins: i2c1 {
+		groups = "i2c1";
+		function = "i2c1";
 	};
 
 	mmc_pins: mmc {
@@ -116,6 +630,16 @@
 		power-source = <1800>;
 	};
 
+	qspi0_pins: qspi0 {
+		groups = "qspi0_ctrl", "qspi0_data4";
+		function = "qspi0";
+	};
+
+	qspi1_pins: qspi1 {
+		groups = "qspi1_ctrl", "qspi1_data4";
+		function = "qspi1";
+	};
+
 	scif0_pins: scif0 {
 		groups = "scif0_data";
 		function = "scif0";
@@ -127,6 +651,73 @@
 	};
 };
 
+&rpc0 {
+	pinctrl-0 = <&qspi0_pins &qspi1_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+
+	flash@0 {
+		compatible = "spansion,s25fs512s", "jedec,spi-nor";
+		reg = <0>;
+		spi-max-frequency = <50000000>;
+		spi-rx-bus-width = <4>;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			bootparam@0 {
+				reg = <0x00000000 0x040000>;
+				read-only;
+			};
+			cr7@00040000 {
+				reg = <0x00040000 0x080000>;
+				read-only;
+			};
+			cert_header_sa3@000C0000 {
+				reg = <0x000C0000 0x080000>;
+				read-only;
+			};
+			bl2@00140000 {
+				reg = <0x00140000 0x040000>;
+				read-only;
+			};
+			cert_header_sa6@00180000 {
+				reg = <0x00180000 0x040000>;
+				read-only;
+			};
+			bl31@001C0000 {
+				reg = <0x001C0000 0x480000>;
+				read-only;
+			};
+			uboot@00640000 {
+				reg = <0x00640000 0x0C0000>;
+				read-only;
+			};
+			uboot-env@00700000 {
+				reg = <0x00700000 0x040000>;
+				read-only;
+			};
+			dtb@00740000 {
+				reg = <0x00740000 0x080000>;
+			};
+			kernel@007C0000 {
+				reg = <0x007C0000 0x1400000>;
+			};
+			user@01BC0000 {
+				reg = <0x01BC0000 0x2440000>;
+			};
+		};
+	};
+};
+
+&rwdt {
+	timeout-sec = <60>;
+	status = "okay";
+};
+
 &scif0 {
 	pinctrl-0 = <&scif0_pins>, <&scif_clk_pins>;
 	pinctrl-names = "default";
@@ -136,4 +727,264 @@
 
 &scif_clk {
 	clock-frequency = <14745600>;
+};
+
+&vin0 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			vin0ep0: endpoint {
+				csi,select = "csi40";
+				virtual,channel = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&ov106xx_in0>;
+			};
+		};
+		port@1 {
+			csi0ep0: endpoint {
+				remote-endpoint = <&csi40_ep>;
+			};
+		};
+		port@2 {
+			vin0_max9286_des0ep0: endpoint@0 {
+				remote-endpoint = <&max9286_des0ep0>;
+			};
+		};
+	};
+};
+
+&vin1 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			vin1ep0: endpoint {
+				csi,select = "csi40";
+				virtual,channel = <1>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&ov106xx_in1>;
+			};
+		};
+		port@1 {
+			csi0ep1: endpoint {
+				remote-endpoint = <&csi40_ep>;
+			};
+		};
+		port@2 {
+			vin1_max9286_des0ep1: endpoint@0 {
+				remote-endpoint = <&max9286_des0ep1>;
+			};
+		};
+	};
+};
+
+&vin2 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			vin2ep0: endpoint {
+				csi,select = "csi40";
+				virtual,channel = <2>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&ov106xx_in2>;
+			};
+		};
+		port@1 {
+			csi0ep2: endpoint {
+				remote-endpoint = <&csi40_ep>;
+			};
+		};
+		port@2 {
+			vin2_max9286_des0ep2: endpoint@0 {
+				remote-endpoint = <&max9286_des0ep2>;
+			};
+		};
+	};
+};
+
+&vin3 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			vin3ep0: endpoint {
+				csi,select = "csi40";
+				virtual,channel = <3>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&ov106xx_in3>;
+			};
+		};
+		port@1 {
+			csi0ep3: endpoint {
+				remote-endpoint = <&csi40_ep>;
+			};
+		};
+		port@2 {
+			vin3_max9286_des0ep3: endpoint@0 {
+				remote-endpoint = <&max9286_des0ep3>;
+			};
+		};
+	};
+};
+
+&vin4 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			vin4ep0: endpoint {
+				csi,select = "csi41";
+				virtual,channel = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&ov106xx_in4>;
+			};
+		};
+		port@1 {
+			csi1ep0: endpoint {
+				remote-endpoint = <&csi41_ep>;
+			};
+		};
+		port@2 {
+			vin4_max9286_des1ep0: endpoint@0 {
+				remote-endpoint = <&max9286_des1ep0>;
+			};
+		};
+	};
+};
+
+&vin5 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			vin5ep0: endpoint {
+				csi,select = "csi41";
+				virtual,channel = <1>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&ov106xx_in5>;
+			};
+		};
+		port@1 {
+			csi1ep1: endpoint {
+				remote-endpoint = <&csi41_ep>;
+			};
+		};
+		port@2 {
+			vin5_max9286_des1ep1: endpoint@0 {
+				remote-endpoint = <&max9286_des1ep1>;
+			};
+		};
+	};
+};
+
+&vin6 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			vin6ep0: endpoint {
+				csi,select = "csi41";
+				virtual,channel = <2>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&ov106xx_in6>;
+			};
+		};
+		port@1 {
+			csi1ep2: endpoint {
+				remote-endpoint = <&csi41_ep>;
+			};
+		};
+		port@2 {
+			vin6_max9286_des1ep2: endpoint@0 {
+				remote-endpoint = <&max9286_des1ep2>;
+			};
+		};
+	};
+};
+
+&vin7 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			vin7ep0: endpoint {
+				csi,select = "csi41";
+				virtual,channel = <3>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&ov106xx_in7>;
+			};
+		};
+		port@1 {
+			csi1ep3: endpoint {
+				remote-endpoint = <&csi41_ep>;
+			};
+		};
+		port@2 {
+			vin7_max9286_des1ep3: endpoint@0 {
+				remote-endpoint = <&max9286_des1ep3>;
+			};
+		};
+	};
+};
+
+&tmu0 {
+	status = "okay";
+};
+
+&tmu1 {
+	status = "okay";
+};
+
+&tmu2 {
+	status = "okay";
+};
+
+&tmu3 {
+	status = "okay";
+};
+
+&tmu4 {
+	status = "okay";
+};
+
+&cmt0 {
+	status = "okay";
+};
+
+&cmt1 {
+	status = "okay";
+};
+
+&cmt2 {
+	status = "okay";
+};
+
+&cmt3 {
+	status = "okay";
 };

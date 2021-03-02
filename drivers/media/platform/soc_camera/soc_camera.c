@@ -44,7 +44,7 @@
 #define DEFAULT_WIDTH	640
 #define DEFAULT_HEIGHT	480
 
-#define MAP_MAX_NUM 32
+#define MAP_MAX_NUM 128
 static DECLARE_BITMAP(device_map, MAP_MAX_NUM);
 static LIST_HEAD(hosts);
 static LIST_HEAD(devices);
@@ -289,7 +289,7 @@ static int soc_camera_try_fmt(struct soc_camera_device *icd,
 static int soc_camera_try_fmt_vid_cap(struct file *file, void *priv,
 				      struct v4l2_format *f)
 {
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 
 	WARN_ON(priv != file->private_data);
 
@@ -304,7 +304,7 @@ static int soc_camera_try_fmt_vid_cap(struct file *file, void *priv,
 static int soc_camera_enum_input(struct file *file, void *priv,
 				 struct v4l2_input *inp)
 {
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 
 	if (inp->index != 0)
 		return -EINVAL;
@@ -334,7 +334,7 @@ static int soc_camera_s_input(struct file *file, void *priv, unsigned int i)
 
 static int soc_camera_s_std(struct file *file, void *priv, v4l2_std_id a)
 {
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
 
 	return v4l2_subdev_call(sd, video, s_std, a);
@@ -342,7 +342,7 @@ static int soc_camera_s_std(struct file *file, void *priv, v4l2_std_id a)
 
 static int soc_camera_g_std(struct file *file, void *priv, v4l2_std_id *a)
 {
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
 
 	return v4l2_subdev_call(sd, video, g_std, a);
@@ -351,7 +351,7 @@ static int soc_camera_g_std(struct file *file, void *priv, v4l2_std_id *a)
 static int soc_camera_enum_framesizes(struct file *file, void *fh,
 					 struct v4l2_frmsizeenum *fsize)
 {
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 
 	return ici->ops->enum_framesizes(icd, fsize);
@@ -361,7 +361,7 @@ static int soc_camera_reqbufs(struct file *file, void *priv,
 			      struct v4l2_requestbuffers *p)
 {
 	int ret;
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 
 	WARN_ON(priv != file->private_data);
 
@@ -377,7 +377,7 @@ static int soc_camera_reqbufs(struct file *file, void *priv,
 static int soc_camera_querybuf(struct file *file, void *priv,
 			       struct v4l2_buffer *p)
 {
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 
 	WARN_ON(priv != file->private_data);
 
@@ -387,7 +387,7 @@ static int soc_camera_querybuf(struct file *file, void *priv,
 static int soc_camera_qbuf(struct file *file, void *priv,
 			   struct v4l2_buffer *p)
 {
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 
 	WARN_ON(priv != file->private_data);
 
@@ -400,7 +400,7 @@ static int soc_camera_qbuf(struct file *file, void *priv,
 static int soc_camera_dqbuf(struct file *file, void *priv,
 			    struct v4l2_buffer *p)
 {
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 
 	WARN_ON(priv != file->private_data);
 
@@ -413,7 +413,7 @@ static int soc_camera_dqbuf(struct file *file, void *priv,
 static int soc_camera_create_bufs(struct file *file, void *priv,
 			    struct v4l2_create_buffers *create)
 {
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 	int ret;
 
 	if (icd->streamer && icd->streamer != file)
@@ -428,7 +428,7 @@ static int soc_camera_create_bufs(struct file *file, void *priv,
 static int soc_camera_prepare_buf(struct file *file, void *priv,
 				  struct v4l2_buffer *b)
 {
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 
 	return vb2_prepare_buf(&icd->vb2_vidq, b);
 }
@@ -436,7 +436,7 @@ static int soc_camera_prepare_buf(struct file *file, void *priv,
 static int soc_camera_expbuf(struct file *file, void *priv,
 			     struct v4l2_exportbuffer *p)
 {
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 
 	if (icd->streamer && icd->streamer != file)
 		return -EBUSY;
@@ -632,6 +632,7 @@ static int soc_camera_open(struct file *file)
 		return -ENODEV;
 	}
 
+	v4l2_fh_open(file);
 	icd = video_get_drvdata(vdev);
 	ici = to_soc_camera_host(icd->parent);
 
@@ -708,7 +709,6 @@ static int soc_camera_open(struct file *file)
 	}
 	mutex_unlock(&ici->host_lock);
 
-	file->private_data = icd;
 	dev_dbg(icd->pdev, "camera device open\n");
 
 	return 0;
@@ -736,14 +736,19 @@ econtrol:
 
 static int soc_camera_close(struct file *file)
 {
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
+	struct v4l2_event ev;
 
 	mutex_lock(&ici->host_lock);
 	if (icd->streamer == file) {
 		if (ici->ops->init_videobuf2)
 			vb2_queue_release(&icd->vb2_vidq);
 		icd->streamer = NULL;
+
+		memset(&ev, 0, sizeof(ev));
+		ev.type = V4L2_EVENT_EOS;
+		v4l2_event_queue(icd->vdev, &ev);
 	}
 	icd->use_count--;
 	if (!icd->use_count) {
@@ -754,6 +759,8 @@ static int soc_camera_close(struct file *file)
 
 		soc_camera_remove_device(icd);
 	}
+
+	v4l2_fh_release(file);
 
 	mutex_unlock(&ici->host_lock);
 
@@ -767,7 +774,7 @@ static int soc_camera_close(struct file *file)
 static ssize_t soc_camera_read(struct file *file, char __user *buf,
 			       size_t count, loff_t *ppos)
 {
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 
 	dev_dbg(icd->pdev, "read called, buf %p\n", buf);
@@ -783,7 +790,7 @@ static ssize_t soc_camera_read(struct file *file, char __user *buf,
 
 static int soc_camera_mmap(struct file *file, struct vm_area_struct *vma)
 {
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	int err;
 
@@ -807,12 +814,14 @@ static int soc_camera_mmap(struct file *file, struct vm_area_struct *vma)
 
 static unsigned int soc_camera_poll(struct file *file, poll_table *pt)
 {
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	unsigned res = POLLERR;
 
+/*
 	if (icd->streamer != file)
 		return POLLERR;
+*/
 
 	mutex_lock(&ici->host_lock);
 	res = ici->ops->poll(file, pt);
@@ -833,7 +842,7 @@ static const struct v4l2_file_operations soc_camera_fops = {
 static int soc_camera_s_fmt_vid_cap(struct file *file, void *priv,
 				    struct v4l2_format *f)
 {
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 	int ret;
 
 	WARN_ON(priv != file->private_data);
@@ -862,7 +871,7 @@ static int soc_camera_s_fmt_vid_cap(struct file *file, void *priv,
 static int soc_camera_enum_fmt_vid_cap(struct file *file, void  *priv,
 				       struct v4l2_fmtdesc *f)
 {
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 	const struct soc_mbus_pixelfmt *format;
 
 	WARN_ON(priv != file->private_data);
@@ -881,7 +890,7 @@ static int soc_camera_enum_fmt_vid_cap(struct file *file, void  *priv,
 static int soc_camera_g_fmt_vid_cap(struct file *file, void *priv,
 				    struct v4l2_format *f)
 {
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 	struct v4l2_pix_format *pix = &f->fmt.pix;
 
 	WARN_ON(priv != file->private_data);
@@ -904,7 +913,7 @@ static int soc_camera_g_fmt_vid_cap(struct file *file, void *priv,
 static int soc_camera_querycap(struct file *file, void  *priv,
 			       struct v4l2_capability *cap)
 {
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 
 	WARN_ON(priv != file->private_data);
@@ -916,8 +925,9 @@ static int soc_camera_querycap(struct file *file, void  *priv,
 static int soc_camera_streamon(struct file *file, void *priv,
 			       enum v4l2_buf_type i)
 {
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+	struct v4l2_event ev;
 	int ret;
 
 	WARN_ON(priv != file->private_data);
@@ -933,14 +943,19 @@ static int soc_camera_streamon(struct file *file, void *priv,
 	if (!ret)
 		v4l2_subdev_call(sd, video, s_stream, 1);
 
+	memset(&ev, 0, sizeof(ev));
+	ev.type = V4L2_EVENT_SOC_START_STREAM;
+	v4l2_event_queue(icd->vdev, &ev);
+
 	return ret;
 }
 
 static int soc_camera_streamoff(struct file *file, void *priv,
 				enum v4l2_buf_type i)
 {
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+	struct v4l2_event ev;
 	int ret;
 
 	WARN_ON(priv != file->private_data);
@@ -959,13 +974,17 @@ static int soc_camera_streamoff(struct file *file, void *priv,
 
 	v4l2_subdev_call(sd, video, s_stream, 0);
 
+	memset(&ev, 0, sizeof(ev));
+	ev.type = V4L2_EVENT_EOS;
+	v4l2_event_queue(icd->vdev, &ev);
+
 	return ret;
 }
 
 static int soc_camera_g_selection(struct file *file, void *fh,
 				  struct v4l2_selection *s)
 {
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 
 	/* With a wrong type no need to try to fall back to cropping */
@@ -978,7 +997,7 @@ static int soc_camera_g_selection(struct file *file, void *fh,
 static int soc_camera_s_selection(struct file *file, void *fh,
 				  struct v4l2_selection *s)
 {
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	int ret;
 
@@ -1023,7 +1042,7 @@ static int soc_camera_s_selection(struct file *file, void *fh,
 static int soc_camera_g_parm(struct file *file, void *fh,
 			     struct v4l2_streamparm *a)
 {
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 
 	if (ici->ops->get_parm)
@@ -1035,7 +1054,7 @@ static int soc_camera_g_parm(struct file *file, void *fh,
 static int soc_camera_s_parm(struct file *file, void *fh,
 			     struct v4l2_streamparm *a)
 {
-	struct soc_camera_device *icd = file->private_data;
+	struct soc_camera_device *icd = video_drvdata(file);
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 
 	if (ici->ops->set_parm)
@@ -1043,6 +1062,56 @@ static int soc_camera_s_parm(struct file *file, void *fh,
 
 	return -ENOIOCTLCMD;
 }
+
+static int soc_camera_g_edid(struct file *file, void *fh,
+			     struct v4l2_edid *edid)
+{
+	struct soc_camera_device *icd = video_drvdata(file);
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
+
+	if (ici->ops->get_edid)
+		return ici->ops->get_edid(icd, edid);
+
+	return -ENOIOCTLCMD;
+}
+
+static long soc_camera_default(struct file *file, void *fh,
+			     bool valid_prio, unsigned int cmd, void *arg)
+{
+	struct soc_camera_device *icd = video_drvdata(file);
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
+
+	if (ici->ops->custom_ioctl)
+		return ici->ops->custom_ioctl(icd, valid_prio, cmd, arg);
+
+	return -ENOIOCTLCMD;
+}
+
+#ifdef CONFIG_VIDEO_ADV_DEBUG
+static int soc_camera_g_register(struct file *file, void *priv,
+				 struct v4l2_dbg_register *reg)
+{
+	struct soc_camera_device *icd = video_drvdata(file);
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
+
+	if (ici->ops->get_register)
+		return ici->ops->get_register(icd, reg);
+
+	return -ENOIOCTLCMD;
+}
+
+static int soc_camera_s_register(struct file *file, void *priv,
+				 const struct v4l2_dbg_register *reg)
+{
+	struct soc_camera_device *icd = video_drvdata(file);
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
+
+	if (ici->ops->set_register)
+		return ici->ops->set_register(icd, reg);
+
+	return -ENOIOCTLCMD;
+}
+#endif
 
 static int soc_camera_probe(struct soc_camera_host *ici,
 			    struct soc_camera_device *icd);
@@ -1602,7 +1671,7 @@ static void scan_of_host(struct soc_camera_host *ici)
 		of_node_put(ren);
 
 		if (i) {
-			dev_err(dev, "multiple subdevices aren't supported yet!\n");
+			dev_dbg(dev, "multiple subdevices aren't supported yet!\n");
 			break;
 		}
 	}
@@ -1872,9 +1941,11 @@ int soc_camera_host_register(struct soc_camera_host *ici)
 		}
 	}
 
-	ret = v4l2_device_register(ici->v4l2_dev.dev, &ici->v4l2_dev);
-	if (ret < 0)
-		goto edevreg;
+	if (!ici->v4l2dev_preregistered) {
+		ret = v4l2_device_register(ici->v4l2_dev.dev, &ici->v4l2_dev);
+		if (ret < 0)
+			goto edevreg;
+	}
 
 	list_add_tail(&ici->list, &hosts);
 	mutex_unlock(&list_lock);
@@ -1902,6 +1973,18 @@ edevreg:
 	return ret;
 }
 EXPORT_SYMBOL(soc_camera_host_register);
+
+int soc_camera_host_preregister_v4l2_dev(struct soc_camera_host *ici)
+{
+	int ret;
+
+	ret = v4l2_device_register(ici->v4l2_dev.dev, &ici->v4l2_dev);
+	if (ret == 0)
+		ici->v4l2dev_preregistered = true;
+
+	return ret;
+}
+EXPORT_SYMBOL(soc_camera_host_preregister_v4l2_dev);
 
 /* Unregister all clients! */
 void soc_camera_host_unregister(struct soc_camera_host *ici)
@@ -1988,6 +2071,13 @@ static int soc_camera_device_register(struct soc_camera_device *icd)
 	return 0;
 }
 
+static int soc_camera_subscribe_event(struct v4l2_fh *fh,
+                         const struct v4l2_event_subscription *sub)
+{
+	/* Just subscribe any event */
+	return v4l2_event_subscribe(fh, sub, 16, NULL);
+}
+
 static const struct v4l2_ioctl_ops soc_camera_ioctl_ops = {
 	.vidioc_querycap	 = soc_camera_querycap,
 	.vidioc_try_fmt_vid_cap  = soc_camera_try_fmt_vid_cap,
@@ -2013,6 +2103,14 @@ static const struct v4l2_ioctl_ops soc_camera_ioctl_ops = {
 	.vidioc_s_selection	 = soc_camera_s_selection,
 	.vidioc_g_parm		 = soc_camera_g_parm,
 	.vidioc_s_parm		 = soc_camera_s_parm,
+	.vidioc_g_edid		 = soc_camera_g_edid,
+	.vidioc_default		 = soc_camera_default,
+#ifdef CONFIG_VIDEO_ADV_DEBUG
+	.vidioc_g_register	= soc_camera_g_register,
+	.vidioc_s_register	= soc_camera_s_register,
+#endif
+	.vidioc_subscribe_event		= soc_camera_subscribe_event,
+	.vidioc_unsubscribe_event	= v4l2_event_unsubscribe,
 };
 
 static int video_dev_create(struct soc_camera_device *icd)
@@ -2055,6 +2153,10 @@ static int soc_camera_video_start(struct soc_camera_device *icd)
 		v4l2_disable_ioctl(icd->vdev, VIDIOC_S_STD);
 		v4l2_disable_ioctl(icd->vdev, VIDIOC_ENUMSTD);
 	}
+#ifdef CONFIG_VIDEO_ADV_DEBUG
+	v4l2_disable_ioctl_locking(icd->vdev, VIDIOC_DBG_G_REGISTER);
+	v4l2_disable_ioctl_locking(icd->vdev, VIDIOC_DBG_S_REGISTER);
+#endif
 	ret = video_register_device(icd->vdev, VFL_TYPE_GRABBER, -1);
 	if (ret < 0) {
 		dev_err(icd->pdev, "video_register_device failed: %d\n", ret);

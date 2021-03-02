@@ -384,7 +384,7 @@ int pci_epc_add_epf(struct pci_epc *epc, struct pci_epf *epf)
 
 	epf->epc = epc;
 	if (dev->of_node) {
-		of_dma_configure(&epf->dev, dev->of_node);
+		of_dma_configure(&epf->dev, dev->of_node, true);
 	} else {
 		dma_set_coherent_mask(&epf->dev, epc->dev.coherent_dma_mask);
 		epf->dev.dma_mask = epc->dev.dma_mask;

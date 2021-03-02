@@ -15,6 +15,7 @@
 
 	aliases {
 		serial0 = &scif0;
+		ethernet0 = &avb;
 	};
 
 	chosen {
@@ -24,7 +25,40 @@
 	memory@48000000 {
 		device_type = "memory";
 		/* first 128MB is reserved for secure area. */
-		reg = <0x0 0x48000000 0x0 0x38000000>;
+		reg = <0x0 0x48000000 0x0 0x78000000>;
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/* device specific region for Lossy Decompression */
+		lossy_decompress: linux,lossy_decompress {
+			no-map;
+			reg = <0x00000000 0x7c000000 0x0 0x03000000>;
+		};
+
+
+		/* device specific region for contiguous allocations */
+		mmp_reserved: linux,multimedia {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x7f000000 0x0 0x01000000>;
+		};
+	};
+
+	mmngr {
+		compatible = "renesas,mmngr";
+		memory-region = <&mmp_reserved>, <&lossy_decompress>;
+	};
+
+	mmngrbuf {
+		compatible = "renesas,mmngrbuf";
+	};
+
+	vspm_if {
+		compatible = "renesas,vspm_if";
 	};
 
 	osc5_clk: osc5-clock {
@@ -45,6 +79,15 @@
 	vcc_d3_3v: regulator-1 {
 		compatible = "regulator-fixed";
 		regulator-name = "VCC_D3.3V";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	vcc_vddq_vin0: regulator-2 {
+		compatible = "regulator-fixed";
+		regulator-name = "VCC_VDDQ_VIN0";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		regulator-boot-on;
@@ -99,6 +142,8 @@
 	phy0: ethernet-phy@0 {
 		rxc-skew-ps = <1500>;
 		reg = <0>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <17 IRQ_TYPE_LEVEL_LOW>;
 	};
 };
 
@@ -128,9 +173,87 @@
 		function = "i2c0";
 	};
 
+	mmc_pins: mmc_3_3v {
+		groups = "mmc_data8", "mmc_ctrl";
+		function = "mmc";
+		power-source = <3300>;
+	};
+
+	qspi0_pins: qspi0 {
+		groups = "qspi0_ctrl", "qspi0_data4";
+		function = "qspi0";
+	};
+
+	qspi1_pins: qspi1 {
+		groups = "qspi1_ctrl", "qspi1_data4";
+		function = "qspi1";
+	};
+
 	scif0_pins: scif0 {
 		groups = "scif0_data";
 		function = "scif0";
+	};
+};
+
+&rpc0 {
+	pinctrl-0 = <&qspi0_pins &qspi1_pins>;
+	pinctrl-names = "default";
+
+	status = "okay";
+
+	flash@0 {
+		compatible = "spansion,s25fs512s", "jedec,spi-nor";
+		reg = <0>;
+		spi-max-frequency = <50000000>;
+		spi-rx-bus-width = <4>;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			bootparam@0 {
+				reg = <0x00000000 0x040000>;
+				read-only;
+			};
+			cr7@00040000 {
+				reg = <0x00040000 0x080000>;
+				read-only;
+			};
+			cert_header_sa3@000C0000 {
+				reg = <0x000C0000 0x080000>;
+				read-only;
+			};
+			bl2@00140000 {
+				reg = <0x00140000 0x040000>;
+				read-only;
+			};
+			cert_header_sa6@00180000 {
+				reg = <0x00180000 0x040000>;
+				read-only;
+			};
+			bl31@001C0000 {
+				reg = <0x001C0000 0x480000>;
+				read-only;
+			};
+			uboot@00640000 {
+				reg = <0x00640000 0x0C0000>;
+				read-only;
+			};
+			uboot-env@00700000 {
+				reg = <0x00700000 0x040000>;
+				read-only;
+			};
+			dtb@00740000 {
+				reg = <0x00740000 0x080000>;
+			};
+			kernel@007C0000 {
+				reg = <0x007C0000 0x1400000>;
+			};
+			user@01BC0000 {
+				reg = <0x01BC0000 0x2440000>;
+			};
+		};
 	};
 };
 
@@ -192,9 +315,56 @@
 	};
 };
 
+&mmc0 {
+	pinctrl-0 = <&mmc_pins>;
+	pinctrl-names = "default";
+
+	vmmc-supply = <&vcc_d3_3v>;
+	vqmmc-supply = <&vcc_vddq_vin0>;
+	bus-width = <8>;
+	non-removable;
+	status = "okay";
+};
+
 &scif0 {
 	pinctrl-0 = <&scif0_pins>;
 	pinctrl-names = "default";
 
+	status = "okay";
+};
+
+&tmu0 {
+	status = "okay";
+};
+
+&tmu1 {
+	status = "okay";
+};
+
+&tmu2 {
+	status = "okay";
+};
+
+&tmu3 {
+	status = "okay";
+};
+
+&tmu4 {
+	status = "okay";
+};
+
+&cmt0 {
+	status = "okay";
+};
+
+&cmt1 {
+	status = "okay";
+};
+
+&cmt2 {
+	status = "okay";
+};
+
+&cmt3 {
 	status = "okay";
 };

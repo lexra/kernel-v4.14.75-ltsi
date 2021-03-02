@@ -1,0 +1,5 @@
+config SOC_CAMERA_TI9X4
+	tristate "ti9x4 FPDLink3 support"
+	depends on I2C
+	help
+	  This is an Texas Instruments ti9X4 FPDLink3 driver

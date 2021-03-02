@@ -1,0 +1,5 @@
+config SOC_CAMERA_OV106XX
+	tristate "ov106xx camera support"
+	depends on I2C
+	help
+	  This is a runtime detected GMSL1/GMSL2/FPDLink3 sensors driver

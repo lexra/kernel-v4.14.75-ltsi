@@ -47,6 +47,12 @@ config SOC_CAMERA_OV5642
 	help
 	  This is a V4L2 camera driver for the OmniVision OV5642 sensor
 
+config SOC_CAMERA_OV5647
+	tristate "ov5647 camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a V4L2 camera driver for the OmniVision OV5647 sensor
+
 config SOC_CAMERA_OV772X
 	tristate "ov772x camera support"
 	depends on SOC_CAMERA && I2C
@@ -76,3 +82,19 @@ config SOC_CAMERA_TW9910
 	depends on SOC_CAMERA && I2C
 	help
 	  This is a tw9910 video driver
+
+config SOC_CAMERA_IMX219
+	tristate "imx219 camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is Sony IMX219 driver
+
+config SOC_CAMERA_AR0147
+	tristate "AR0147 camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is an AR0147 imager glue
+
+source "drivers/media/i2c/soc_camera/gmsl/Kconfig"
+source "drivers/media/i2c/soc_camera/fpdlink/Kconfig"
+source "drivers/media/i2c/soc_camera/imagers/Kconfig"

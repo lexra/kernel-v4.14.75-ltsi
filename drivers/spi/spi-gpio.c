@@ -218,10 +218,6 @@ static void spi_gpio_chipselect(struct spi_device *spi, int is_active)
 	struct spi_gpio *spi_gpio = spi_to_spi_gpio(spi);
 	unsigned long cs = spi_gpio->cs_gpios[spi->chip_select];
 
-	/* set initial clock polarity */
-	if (is_active)
-		setsck(spi, spi->mode & SPI_CPOL);
-
 	if (cs != SPI_GPIO_NO_CHIPSELECT) {
 		/* SPI is normally active-low */
 		gpio_set_value_cansleep(cs, (spi->mode & SPI_CS_HIGH) ? is_active : !is_active);
@@ -257,6 +253,10 @@ static int spi_gpio_setup(struct spi_device *spi)
 					!(spi->mode & SPI_CS_HIGH));
 		}
 	}
+
+	/* set initial clock polarity */
+	setsck(spi, spi->mode & SPI_CPOL);
+
 	if (!status) {
 		/* in case it was initialized from static board data */
 		spi_gpio->cs_gpios[spi->chip_select] = cs;
@@ -289,7 +289,7 @@ static int spi_gpio_alloc(unsigned pin, const char *label, bool is_in)
 		if (is_in)
 			value = gpio_direction_input(pin);
 		else
-			value = gpio_direction_output(pin, 0);
+			value = gpio_direction_output(pin, 1);
 	}
 	return value;
 }

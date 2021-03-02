@@ -1863,6 +1863,19 @@
 			status = "disabled";
 		};
 
+		mlp: mlp@ec520000 {
+			compatible = "rcar,medialb-dim2";
+			reg = <0 0xec520000 0 0x800>;
+			interrupts = <GIC_SPI 385 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 386 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 384 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 387 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 388 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 802>;
+			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
+			status = "disabled";
+		};
+
 		msiof0: spi@e6e90000 {
 			compatible = "renesas,msiof-r8a7795",
 				     "renesas,rcar-gen3-msiof";
@@ -1929,6 +1942,19 @@
 			status = "disabled";
 		};
 
+		rpc0: rpc0@ee200000 {
+			compatible = "renesas,rpc-r8a7795", "renesas,rpc";
+			reg = <0 0xee200000 0 0x1f0>,
+			      <0 0x08000000 0 0x04000000>,
+			      <0 0xee208000 0 0x100>;
+			interrupts = <GIC_SPI 38 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 917>;
+			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
 		vin0: video@e6ef0000 {
 			compatible = "renesas,vin-r8a7795";
 			reg = <0 0xe6ef0000 0 0x1000>;
@@ -1938,27 +1964,6 @@
 			resets = <&cpg 811>;
 			renesas,id = <0>;
 			status = "disabled";
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					vin0csi20: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&csi20vin0>;
-					};
-					vin0csi40: endpoint@2 {
-						reg = <2>;
-						remote-endpoint = <&csi40vin0>;
-					};
-				};
-			};
 		};
 
 		vin1: video@e6ef1000 {
@@ -1970,27 +1975,6 @@
 			resets = <&cpg 810>;
 			renesas,id = <1>;
 			status = "disabled";
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					vin1csi20: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&csi20vin1>;
-					};
-					vin1csi40: endpoint@2 {
-						reg = <2>;
-						remote-endpoint = <&csi40vin1>;
-					};
-				};
-			};
 		};
 
 		vin2: video@e6ef2000 {
@@ -2002,27 +1986,6 @@
 			resets = <&cpg 809>;
 			renesas,id = <2>;
 			status = "disabled";
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					vin2csi20: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&csi20vin2>;
-					};
-					vin2csi40: endpoint@2 {
-						reg = <2>;
-						remote-endpoint = <&csi40vin2>;
-					};
-				};
-			};
 		};
 
 		vin3: video@e6ef3000 {
@@ -2034,27 +1997,6 @@
 			resets = <&cpg 808>;
 			renesas,id = <3>;
 			status = "disabled";
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					vin3csi20: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&csi20vin3>;
-					};
-					vin3csi40: endpoint@2 {
-						reg = <2>;
-						remote-endpoint = <&csi40vin3>;
-					};
-				};
-			};
 		};
 
 		vin4: video@e6ef4000 {
@@ -2066,27 +2008,6 @@
 			resets = <&cpg 807>;
 			renesas,id = <4>;
 			status = "disabled";
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					vin4csi20: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&csi20vin4>;
-					};
-					vin4csi41: endpoint@3 {
-						reg = <3>;
-						remote-endpoint = <&csi41vin4>;
-					};
-				};
-			};
 		};
 
 		vin5: video@e6ef5000 {
@@ -2098,27 +2019,6 @@
 			resets = <&cpg 806>;
 			renesas,id = <5>;
 			status = "disabled";
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					vin5csi20: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&csi20vin5>;
-					};
-					vin5csi41: endpoint@3 {
-						reg = <3>;
-						remote-endpoint = <&csi41vin5>;
-					};
-				};
-			};
 		};
 
 		vin6: video@e6ef6000 {
@@ -2130,27 +2030,6 @@
 			resets = <&cpg 805>;
 			renesas,id = <6>;
 			status = "disabled";
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					vin6csi20: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&csi20vin6>;
-					};
-					vin6csi41: endpoint@3 {
-						reg = <3>;
-						remote-endpoint = <&csi41vin6>;
-					};
-				};
-			};
 		};
 
 		vin7: video@e6ef7000 {
@@ -2162,27 +2041,6 @@
 			resets = <&cpg 804>;
 			renesas,id = <7>;
 			status = "disabled";
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					vin7csi20: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&csi20vin7>;
-					};
-					vin7csi41: endpoint@3 {
-						reg = <3>;
-						remote-endpoint = <&csi41vin7>;
-					};
-				};
-			};
 		};
 
 		drif00: rif@e6f40000 {
@@ -2935,44 +2793,52 @@
 			status = "disabled";
 		};
 
-		imr-lx4@fe860000 {
+		imr_v4l2_alloc: imr_alloc {
+			dma-coherent;
+		};
+
+		imrlx4_ch0: imr0@fe860000 {
 			compatible = "renesas,r8a7795-imr-lx4",
 				     "renesas,imr-lx4";
-			reg = <0 0xfe860000 0 0x2000>;
+			reg = <0 0xfe860000 0 0x10000>;
 			interrupts = <GIC_SPI 192 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 823>;
 			power-domains = <&sysc R8A7795_PD_A3VC>;
 			resets = <&cpg 823>;
+			alloc-dev = <&imr_v4l2_alloc>;
 		};
 
-		imr-lx4@fe870000 {
+		imrlx4_ch1: imr1@fe870000 {
 			compatible = "renesas,r8a7795-imr-lx4",
 				     "renesas,imr-lx4";
-			reg = <0 0xfe870000 0 0x2000>;
+			reg = <0 0xfe870000 0 0x10000>;
 			interrupts = <GIC_SPI 193 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 822>;
 			power-domains = <&sysc R8A7795_PD_A3VC>;
 			resets = <&cpg 822>;
+			alloc-dev = <&imr_v4l2_alloc>;
 		};
 
-		imr-lx4@fe880000 {
+		imrlx4_ch2: imr2@fe880000 {
 			compatible = "renesas,r8a7795-imr-lx4",
 				     "renesas,imr-lx4";
-			reg = <0 0xfe880000 0 0x2000>;
+			reg = <0 0xfe880000 0 0x10000>;
 			interrupts = <GIC_SPI 194 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 821>;
 			power-domains = <&sysc R8A7795_PD_A3VC>;
 			resets = <&cpg 821>;
+			alloc-dev = <&imr_v4l2_alloc>;
 		};
 
-		imr-lx4@fe890000 {
+		imrlx4_ch3: imr3@fe890000 {
 			compatible = "renesas,r8a7795-imr-lx4",
 				     "renesas,imr-lx4";
-			reg = <0 0xfe890000 0 0x2000>;
+			reg = <0 0xfe890000 0 0x10000>;
 			interrupts = <GIC_SPI 195 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cpg CPG_MOD 820>;
 			power-domains = <&sysc R8A7795_PD_A3VC>;
 			resets = <&cpg 820>;
+			alloc-dev = <&imr_v4l2_alloc>;
 		};
 
 		fcpcs: vcp4@fe90f000 {
@@ -3253,51 +3119,6 @@
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			resets = <&cpg 714>;
 			status = "disabled";
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					csi20vin0: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&vin0csi20>;
-					};
-					csi20vin1: endpoint@1 {
-						reg = <1>;
-						remote-endpoint = <&vin1csi20>;
-					};
-					csi20vin2: endpoint@2 {
-						reg = <2>;
-						remote-endpoint = <&vin2csi20>;
-					};
-					csi20vin3: endpoint@3 {
-						reg = <3>;
-						remote-endpoint = <&vin3csi20>;
-					};
-					csi20vin4: endpoint@4 {
-						reg = <4>;
-						remote-endpoint = <&vin4csi20>;
-					};
-					csi20vin5: endpoint@5 {
-						reg = <5>;
-						remote-endpoint = <&vin5csi20>;
-					};
-					csi20vin6: endpoint@6 {
-						reg = <6>;
-						remote-endpoint = <&vin6csi20>;
-					};
-					csi20vin7: endpoint@7 {
-						reg = <7>;
-						remote-endpoint = <&vin7csi20>;
-					};
-				};
-			};
 		};
 
 		csi40: csi2@feaa0000 {
@@ -3308,35 +3129,6 @@
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			resets = <&cpg 716>;
 			status = "disabled";
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					csi40vin0: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&vin0csi40>;
-					};
-					csi40vin1: endpoint@1 {
-						reg = <1>;
-						remote-endpoint = <&vin1csi40>;
-					};
-					csi40vin2: endpoint@2 {
-						reg = <2>;
-						remote-endpoint = <&vin2csi40>;
-					};
-					csi40vin3: endpoint@3 {
-						reg = <3>;
-						remote-endpoint = <&vin3csi40>;
-					};
-				};
-			};
 		};
 
 		csi41: csi2@feab0000 {
@@ -3347,35 +3139,6 @@
 			power-domains = <&sysc R8A7795_PD_ALWAYS_ON>;
 			resets = <&cpg 715>;
 			status = "disabled";
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					reg = <1>;
-
-					csi41vin4: endpoint@0 {
-						reg = <0>;
-						remote-endpoint = <&vin4csi41>;
-					};
-					csi41vin5: endpoint@1 {
-						reg = <1>;
-						remote-endpoint = <&vin5csi41>;
-					};
-					csi41vin6: endpoint@2 {
-						reg = <2>;
-						remote-endpoint = <&vin6csi41>;
-					};
-					csi41vin7: endpoint@3 {
-						reg = <3>;
-						remote-endpoint = <&vin7csi41>;
-					};
-				};
-			};
 		};
 
 		hdmi0: hdmi@fead0000 {
@@ -3517,6 +3280,104 @@
 			reg = <0 0xfff00044 0 4>;
 		};
 	};
+
+		imp_distributer: impdes0 {
+			compatible = "renesas,impx4-distributer";
+			reg = <0 0xffa00000 0 0x4000>;
+			interrupts = <GIC_SPI 439 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 824>;
+			power-domains = <&sysc R8A7795_PD_A3IR>;
+			interrupt-controller;
+			#interrupt-cells = <1>;
+		};
+
+		imp0 {
+			compatible = "renesas,impx4-legacy";
+			reg = <0 0xff900000 0 0x20000>;
+			interrupt-parent = <&imp_distributer>;
+			interrupts = <0>;
+			clocks = <&cpg CPG_MOD 824>;
+			power-domains = <&sysc R8A7795_PD_A3IR>;
+		};
+
+		imp1 {
+			compatible = "renesas,impx4-legacy";
+			reg = <0 0xff920000 0 0x20000>;
+			interrupt-parent = <&imp_distributer>;
+			interrupts = <1>;
+			clocks = <&cpg CPG_MOD 824>;
+			power-domains = <&sysc R8A7795_PD_A3IR>;
+		};
+
+		imp2 {
+			compatible = "renesas,impx4-legacy";
+			reg = <0 0xff940000 0 0x20000>;
+			interrupt-parent = <&imp_distributer>;
+			interrupts = <2>;
+			clocks = <&cpg CPG_MOD 824>;
+			power-domains = <&sysc R8A7795_PD_A3IR>;
+		};
+
+		imp3 {
+			compatible = "renesas,impx4-legacy";
+			reg = <0 0xff960000 0 0x20000>;
+			interrupt-parent = <&imp_distributer>;
+			interrupts = <3>;
+			clocks = <&cpg CPG_MOD 824>;
+			power-domains = <&sysc R8A7795_PD_A3IR>;
+		};
+
+		impsc0 {
+			compatible = "renesas,impx4-shader";
+			reg = <0 0xff980000 0 0x10000>;
+			interrupt-parent = <&imp_distributer>;
+			interrupts = <4>;
+			clocks = <&cpg CPG_MOD 824>;
+			power-domains = <&sysc R8A7795_PD_A3IR>;
+		};
+
+		impsc1 {
+			compatible = "renesas,impx4-shader";
+			reg = <0 0xff990000 0 0x10000>;
+			interrupt-parent = <&imp_distributer>;
+			interrupts = <5>;
+			clocks = <&cpg CPG_MOD 824>;
+			power-domains = <&sysc R8A7795_PD_A3IR>;
+		};
+
+		impsl0 {
+			compatible = "renesas,impx4-legacy";
+			reg = <0 0xff9c0000 0 0x10000>;
+			interrupt-parent = <&imp_distributer>;
+			interrupts = <12>;
+			clocks = <&cpg CPG_MOD 824>;
+			power-domains = <&sysc R8A7795_PD_A3IR>;
+		};
+
+		impdm0 {
+			compatible = "renesas,impx5-dmac";
+			reg = <0 0xffa10000 0 0x4000>;
+			interrupt-parent = <&imp_distributer>;
+			interrupts = <16>;
+			clocks = <&cpg CPG_MOD 824>;
+			power-domains = <&sysc R8A7795_PD_A3IR>;
+		};
+
+		impc0 {
+			compatible = "renesas,impx4-memory";
+			reg = <0 0xffa40000 0 0x20000>;
+			clocks = <&cpg CPG_MOD 824>;
+			power-domains = <&sysc R8A7795_PD_A3IR>;
+		};
+
+		imprtt {
+			compatible = "renesas,impx5-rtt";
+			reg = <0 0xff8d0000 0 0x1000>,
+				<0 0xe6150000 0 0x1000>;
+			interrupts = <GIC_SPI 393 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cpg CPG_MOD 824>;
+			power-domains = <&sysc R8A7795_PD_A3IR>;
+		};
 
 	thermal-zones {
 		emergency {

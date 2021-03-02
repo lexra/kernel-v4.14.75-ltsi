@@ -45,6 +45,28 @@ static u32 cpg_quirks;
 #define RCKCR_CKSEL		BIT(1)	/* Resverd RCLK clock soruce select */
 #define Z2FC_BIT_MASK_SFT_8	BIT(2)	/* Use Z2FC bit mask range to [12:8] */
 #define ZG_PARENT_PLL0		BIT(3)	/* Use PLL0 as ZG clock parent */
+/*
+ * Z2: SYS-CPU divider 2 on V3H seems to be fixed to 1/2 and 1 on V3M.
+ * It is not 100% clear from the User's Manual but at least
+ * FRQCRC register is missed on V3x.
+ */
+#define Z2_SYSCPU_1		BIT(4)  /* Z2 is fixed with SYS-CPU divider 2 set to 1   - V3M */
+#define Z2_SYSCPU_2		BIT(5)  /* Z2 is fixed with SYS-CPU divider 2 set to 1/2 - V3H */
+
+static spinlock_t cpg_lock;
+
+static void cpg_reg_modify(void __iomem *reg, u32 clear, u32 set)
+{
+	unsigned long flags;
+	u32 val;
+
+	spin_lock_irqsave(&cpg_lock, flags);
+	val = readl(reg);
+	val &= ~clear;
+	val |= set;
+	writel(val, reg);
+	spin_unlock_irqrestore(&cpg_lock, flags);
+};
 
 struct cpg_simple_notifier {
 	struct notifier_block nb;
@@ -232,8 +254,16 @@ static unsigned long cpg_z_clk_recalc_rate(struct clk_hw *hw,
 	unsigned int mult;
 	u32 val;
 
-	val = readl(zclk->reg) & zclk->mask;
-	mult = 32 - (val >> __ffs(zclk->mask));
+	if (cpg_quirks & Z2_SYSCPU_1) {
+		/* SYS-CPU divider 2 is 1 == 32/32) */
+		mult = 32;
+	} else if (cpg_quirks & Z2_SYSCPU_2) {
+		/* SYS-CPU divider 2 is 1/2 == 16/32) */
+		mult = 16;
+	} else {
+		val = readl(zclk->reg) & zclk->mask;
+		mult = 32 - (val >> __ffs(zclk->mask));
+	}
 
 	return Z_CLK_ROUND(prate * mult / 32);
 }
@@ -269,7 +299,6 @@ static int cpg_z_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 	unsigned long prate = parent_rate / zclk->fixed_div;
 	unsigned int mult;
 	unsigned int i;
-	u32 val, kick;
 
 	if (!zclk->max_freq)
 		mult = DIV_ROUND_CLOSEST_ULL(rate * 32ULL, prate);
@@ -283,17 +312,14 @@ static int cpg_z_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 	if (readl(zclk->kick_reg) & CPG_FRQCRB_KICK)
 		return -EBUSY;
 
-	val = readl(zclk->reg) & ~zclk->mask;
-	val |= ((32 - mult) << __ffs(zclk->mask)) & zclk->mask;
-	writel(val, zclk->reg);
+	cpg_reg_modify(zclk->reg, zclk->mask,
+		       ((32 - mult) << __ffs(zclk->mask)) & zclk->mask);
 
 	/*
 	 * Set KICK bit in FRQCRB to update hardware setting and wait for
 	 * clock change completion.
 	 */
-	kick = readl(zclk->kick_reg);
-	kick |= CPG_FRQCRB_KICK;
-	writel(kick, zclk->kick_reg);
+	cpg_reg_modify(zclk->kick_reg, 0, CPG_FRQCRB_KICK);
 
 	/*
 	 * Note: There is no HW information about the worst case latency.
@@ -568,12 +594,10 @@ static const struct sd_div_table cpg_sd_div_table[] = {
 static int cpg_sd_clock_enable(struct clk_hw *hw)
 {
 	struct sd_clock *clock = to_sd_clock(hw);
-	u32 val = readl(clock->csn.reg);
 
-	val &= ~(CPG_SD_STP_MASK);
-	val |= clock->div_table[clock->cur_div_idx].val & CPG_SD_STP_MASK;
-
-	writel(val, clock->csn.reg);
+	cpg_reg_modify(clock->csn.reg, CPG_SD_STP_MASK,
+		       clock->div_table[clock->cur_div_idx].val &
+		       CPG_SD_STP_MASK);
 
 	return 0;
 }
@@ -582,7 +606,7 @@ static void cpg_sd_clock_disable(struct clk_hw *hw)
 {
 	struct sd_clock *clock = to_sd_clock(hw);
 
-	writel(readl(clock->csn.reg) | CPG_SD_STP_MASK, clock->csn.reg);
+	cpg_reg_modify(clock->csn.reg, 0, CPG_SD_STP_MASK);
 }
 
 static int cpg_sd_clock_is_enabled(struct clk_hw *hw)
@@ -635,7 +659,6 @@ static int cpg_sd_clock_set_rate(struct clk_hw *hw, unsigned long rate,
 {
 	struct sd_clock *clock = to_sd_clock(hw);
 	unsigned int div = cpg_sd_clock_calc_div(clock, rate, parent_rate);
-	u32 val;
 	unsigned int i;
 
 	for (i = 0; i < clock->div_num; i++)
@@ -647,10 +670,9 @@ static int cpg_sd_clock_set_rate(struct clk_hw *hw, unsigned long rate,
 
 	clock->cur_div_idx = i;
 
-	val = readl(clock->csn.reg);
-	val &= ~(CPG_SD_STP_MASK | CPG_SD_FC_MASK);
-	val |= clock->div_table[i].val & (CPG_SD_STP_MASK | CPG_SD_FC_MASK);
-	writel(val, clock->csn.reg);
+	cpg_reg_modify(clock->csn.reg, CPG_SD_STP_MASK | CPG_SD_FC_MASK,
+		       clock->div_table[i].val &
+		       (CPG_SD_STP_MASK | CPG_SD_FC_MASK));
 
 	return 0;
 }
@@ -713,6 +735,92 @@ free_clock:
 	return clk;
 }
 
+struct rpc_clock {
+	struct clk_divider div;
+	struct clk_gate gate;
+	/*
+	 * One notifier covers both RPC and RPCD2 clocks as they are both
+	 * controlled by the same RPCCKCR register...
+	 */
+	struct cpg_simple_notifier csn;
+};
+
+static const struct clk_div_table cpg_rpcsrc_div_table[] = {
+	{ 2, 5 }, { 3, 6 }, { 0, 0 },
+};
+
+static const struct clk_div_table cpg_rpc_div_table[] = {
+	{ 1, 2 }, { 3, 4 }, { 5, 6 }, { 7, 8 }, { 0, 0 },
+};
+
+static struct clk * __init cpg_rpc_clk_register(const char *name,
+	void __iomem *base, const char *parent_name,
+	struct raw_notifier_head *notifiers)
+{
+	struct rpc_clock *rpc;
+	struct clk *clk;
+
+	rpc = kzalloc(sizeof(*rpc), GFP_KERNEL);
+	if (!rpc)
+		return ERR_PTR(-ENOMEM);
+
+	rpc->div.reg = base + CPG_RPCCKCR;
+	rpc->div.width = 3;
+	rpc->div.table = cpg_rpc_div_table;
+	rpc->div.lock = &cpg_lock;
+
+	rpc->gate.reg = base + CPG_RPCCKCR;
+	rpc->gate.bit_idx = 8;
+	rpc->gate.flags = CLK_GATE_SET_TO_DISABLE;
+	rpc->gate.lock = &cpg_lock;
+
+	rpc->csn.reg = base + CPG_RPCCKCR;
+
+	clk = clk_register_composite(NULL, name, &parent_name, 1, NULL, NULL,
+				     &rpc->div.hw,  &clk_divider_ops,
+				     &rpc->gate.hw, &clk_gate_ops, 0);
+	if (IS_ERR(clk)) {
+		kfree(rpc);
+		return clk;
+	}
+
+	cpg_simple_notifier_register(notifiers, &rpc->csn);
+	return clk;
+}
+
+struct rpcd2_clock {
+	struct clk_fixed_factor fixed;
+	struct clk_gate gate;
+};
+
+static struct clk * __init cpg_rpcd2_clk_register(const char *name,
+						  void __iomem *base,
+						  const char *parent_name)
+{
+	struct rpcd2_clock *rpcd2;
+	struct clk *clk;
+
+	rpcd2 = kzalloc(sizeof(*rpcd2), GFP_KERNEL);
+	if (!rpcd2)
+		return ERR_PTR(-ENOMEM);
+
+	rpcd2->fixed.mult = 1;
+	rpcd2->fixed.div = 2;
+
+	rpcd2->gate.reg = base + CPG_RPCCKCR;
+	rpcd2->gate.bit_idx = 9;
+	rpcd2->gate.flags = CLK_GATE_SET_TO_DISABLE;
+	rpcd2->gate.lock = &cpg_lock;
+
+	clk = clk_register_composite(NULL, name, &parent_name, 1, NULL, NULL,
+				     &rpcd2->fixed.hw, &clk_fixed_factor_ops,
+				     &rpcd2->gate.hw, &clk_gate_ops, CLK_SET_RATE_PARENT);
+	if (IS_ERR(clk))
+		kfree(rpcd2);
+
+	return clk;
+}
+
 static const struct rcar_gen3_cpg_pll_config *cpg_pll_config __initdata;
 static unsigned int cpg_clk_extalr __initdata;
 static u32 cpg_mode __initdata;
@@ -733,6 +841,14 @@ static const struct soc_device_attribute cpg_quirks_match[] __initconst = {
 	{
 		.soc_id = "r8a77990",
 		.data = (void *)(Z2FC_BIT_MASK_SFT_8 | ZG_PARENT_PLL0),
+	},
+	{
+		.soc_id = "r8a77970",
+		.data = (void *)(Z2_SYSCPU_1),
+	},
+	{
+		.soc_id = "r8a77980",
+		.data = (void *)(Z2_SYSCPU_2),
 	},
 	{ /* sentinel */ }
 };
@@ -889,6 +1005,21 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 		return cpg_zg_clk_register(core->name, __clk_get_name(parent),
 					   base, core->div);
 
+	case CLK_TYPE_GEN3_RPCSRC:
+		return clk_register_divider_table(NULL, core->name,
+						  __clk_get_name(parent), 0,
+						  base + CPG_RPCCKCR, 3, 2, 0,
+						  cpg_rpcsrc_div_table,
+						  &cpg_lock);
+
+	case CLK_TYPE_GEN3_RPC:
+		return cpg_rpc_clk_register(core->name, base,
+					    __clk_get_name(parent), notifiers);
+
+	case CLK_TYPE_GEN3_RPCD2:
+		return cpg_rpcd2_clk_register(core->name, base,
+					      __clk_get_name(parent));
+
 	default:
 		return ERR_PTR(-EINVAL);
 	}
@@ -909,5 +1040,8 @@ int __init rcar_gen3_cpg_init(const struct rcar_gen3_cpg_pll_config *config,
 	if (attr)
 		cpg_quirks = (uintptr_t)attr->data;
 	pr_debug("%s: mode = 0x%x quirks = 0x%x\n", __func__, mode, cpg_quirks);
+
+	spin_lock_init(&cpg_lock);
+
 	return 0;
 }

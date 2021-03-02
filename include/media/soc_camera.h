@@ -21,6 +21,10 @@
 #include <media/v4l2-async.h>
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-device.h>
+#include <media/v4l2-event.h>
+
+#define V4L2_EVENT_SOC_START_STREAM	(V4L2_EVENT_PRIVATE_START + 1)
+#define V4L2_EVENT_SOC_PRIVATE_START	(V4L2_EVENT_PRIVATE_START + 1)
 
 struct file;
 struct soc_camera_desc;
@@ -84,6 +88,7 @@ struct soc_camera_host {
 	struct soc_camera_host_ops *ops;
 	struct v4l2_async_subdev **asd;	/* Flat array, arranged in groups */
 	unsigned int *asd_sizes;	/* 0-terminated array of asd group sizes */
+	bool v4l2dev_preregistered;
 };
 
 struct soc_camera_host_ops {
@@ -118,6 +123,13 @@ struct soc_camera_host_ops {
 	int (*set_parm)(struct soc_camera_device *, struct v4l2_streamparm *);
 	int (*enum_framesizes)(struct soc_camera_device *, struct v4l2_frmsizeenum *);
 	unsigned int (*poll)(struct file *, poll_table *);
+	int (*get_edid)(struct soc_camera_device *, struct v4l2_edid *);
+	long (*custom_ioctl)(struct soc_camera_device *, bool valid_prio,
+			 unsigned int cmd, void *arg);
+#ifdef CONFIG_VIDEO_ADV_DEBUG
+	int (*get_register)(struct soc_camera_device *, struct v4l2_dbg_register *reg);
+	int (*set_register)(struct soc_camera_device *, const struct v4l2_dbg_register *reg);
+#endif
 };
 
 #define SOCAM_SENSOR_INVERT_PCLK	(1 << 0)
@@ -270,6 +282,7 @@ static inline struct v4l2_subdev *soc_camera_to_subdev(
 }
 
 int soc_camera_host_register(struct soc_camera_host *ici);
+int soc_camera_host_preregister_v4l2_dev(struct soc_camera_host *ici);
 void soc_camera_host_unregister(struct soc_camera_host *ici);
 
 const struct soc_camera_format_xlate *soc_camera_xlate_by_fourcc(

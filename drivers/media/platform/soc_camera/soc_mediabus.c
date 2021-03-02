@@ -57,6 +57,16 @@ static const struct soc_mbus_lookup mbus_fmt[] = {
 		.layout			= SOC_MBUS_LAYOUT_PACKED,
 	},
 }, {
+	.code = MEDIA_BUS_FMT_YUYV10_2X10,
+	.fmt = {
+		.fourcc			= V4L2_PIX_FMT_YUYV,
+		.name			= "YUYV",
+		.bits_per_sample	= 10,
+		.packing		= SOC_MBUS_PACKING_2X10_PADHI,
+		.order			= SOC_MBUS_ORDER_LE,
+		.layout			= SOC_MBUS_LAYOUT_PACKED,
+	},
+}, {
 	.code = MEDIA_BUS_FMT_RGB555_2X8_PADHI_LE,
 	.fmt = {
 		.fourcc			= V4L2_PIX_FMT_RGB555,
@@ -382,6 +392,16 @@ static const struct soc_mbus_lookup mbus_fmt[] = {
 		.order			= SOC_MBUS_ORDER_LE,
 		.layout			= SOC_MBUS_LAYOUT_PACKED,
 	},
+}, {
+	.code = MEDIA_BUS_FMT_SBGGR16_1X16,
+	.fmt = {
+		.fourcc			= V4L2_PIX_FMT_SBGGR16,
+		.name			= "Bayer 16 RGGB",
+		.bits_per_sample	= 16,
+		.packing		= SOC_MBUS_PACKING_NONE,
+		.order			= SOC_MBUS_ORDER_LE,
+		.layout			= SOC_MBUS_LAYOUT_PACKED,
+	},
 },
 };
 
@@ -401,6 +421,10 @@ int soc_mbus_samples_per_pixel(const struct soc_mbus_pixelfmt *mf,
 	case SOC_MBUS_PACKING_2X8_PADHI:
 	case SOC_MBUS_PACKING_2X8_PADLO:
 		*numerator = 2;
+		*denominator = 1;
+		return 0;
+	case SOC_MBUS_PACKING_2X10_PADHI:
+		*numerator = 3;
 		*denominator = 1;
 		return 0;
 	case SOC_MBUS_PACKING_1_5X8:
@@ -428,6 +452,8 @@ s32 soc_mbus_bytes_per_line(u32 width, const struct soc_mbus_pixelfmt *mf)
 	case SOC_MBUS_PACKING_2X8_PADLO:
 	case SOC_MBUS_PACKING_EXTEND16:
 		return width * 2;
+	case SOC_MBUS_PACKING_2X10_PADHI:
+		return width * 3;
 	case SOC_MBUS_PACKING_1_5X8:
 		return width * 3 / 2;
 	case SOC_MBUS_PACKING_VARIABLE:
